@@ -17,3 +17,9 @@ class Battery(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
+    voltage = Column(Float)
+    capacity = Column(Float)
+    lifetime = Column(Integer)
+
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    device = relationship("Device", back_populates="batteries")
