@@ -9,7 +9,7 @@ class BatteryBase(BaseModel):
     lifetime: int
     device_id: Optional[int] = None
 
-class BatteryUpdete(BaseModel):
+class BatteryUpdate(BaseModel):
     name: Optional[str] = None
     voltage: Optional[float] = None
     capacity: Optional[float] = None
@@ -30,9 +30,18 @@ class DeviceBase(BaseModel):
     name: str
     firmware_version: str
     is_active: bool = True
+    batteries_len: Optional[int] = 0
+
+class DeviceUpdate(BaseModel):
+    name: Optional[str] = None
+    firmware_version: Optional[str] = None
+    is_active: Optional[bool] = True    
 
 class DeviceCreate(DeviceBase):
     pass
+
+class DeviceDelete(DeviceCreate):
+    message: str = "Device was deleted"
 
 class Device(DeviceBase):
     id: int

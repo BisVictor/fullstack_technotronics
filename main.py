@@ -59,26 +59,32 @@ def add_new_battery(battery: schemas.BatteryCreate, db: Session = Depends(get_db
     return db_battery
 
 @app.put("/update_battery_by_id/{battery_id}", response_model=schemas.BatteryBase)
-def update_battery_by_id(battery_id: int = Path(..., title="Battery_id"),
-                          battery_update: schemas.BatteryUpdete = None,
-                            db: Session = Depends(get_db)):
-    db_battery = db.query(Battery).filter(Battery.id == battery_id).first()
+def update_battery_by_id(
+    battery_id: int = Path(..., title="Battery id"),
+    battery_update: schemas.BatteryUpdate = None,
+    db: Session = Depends(get_db)
+):
+    # Находим батарею по ID
+    db_battery = db.query(models.Battery).filter(models.Battery.id == battery_id).first()
     if not db_battery:
         raise HTTPException(status_code=404, detail="Battery not found")
 
-    # поля которые можно менять
+    # Список разрешённых для обновления полей
     allowed = {"name", "voltage", "capacity", "lifetime", "device_id"}
     update_data = battery_update.dict(exclude_unset=True)
 
-    # если передали device_id — можно доп. валидировать устройство
-    if "device_id" in update_data and update_data["device_id"] is not None:
-        device = db.query(models.Device).filter(models.Device.id == update_data["device_id"]).first()
-        if not device:
-            raise HTTPException(status_code=404, detail="Device not found")
-        if len(device.batteries) >= 5:
-            raise HTTPException(status_code=400, detail="Device already has 5 batteries")
+    # Проверка device_id
+    if "device_id" in update_data:
+        device_id = update_data["device_id"]
+        if device_id != 0:  # если не 0 — проверяем, что устройство существует
+            device = db.query(models.Device).filter(models.Device.id == device_id).first()
+            if not device:
+                raise HTTPException(status_code=404, detail="Device not found")
+            if len(device.batteries) >= 5:
+                raise HTTPException(status_code=400, detail="Device already has 5 batteries")
+        # если device_id == 0 — просто разрешаем записать 0 (без проверки)
 
-    # применяем только разрешённые поля
+    # Обновляем только разрешённые поля
     for key, value in update_data.items():
         if key in allowed:
             setattr(db_battery, key, value)
@@ -92,34 +98,86 @@ def update_battery_by_id(battery_id: int = Path(..., title="Battery_id"),
 
     return db_battery
 
+
 @app.delete("/delete_battery_by_id/{battery_id}", response_model=schemas.BatteryDelete)
 def delete_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Session = Depends(get_db)):
     db_battery = db.query(Battery).filter(Battery.id == battery_id).first()
     if not db_battery:
-        raise HTTPException(status_code=404, detail="Battery not founf")
+        raise HTTPException(status_code=404, detail="Battery not found")
     db.delete(db_battery)
     db.commit()
     return db_battery
 
 #---Device---
-@app.get("/get_all_device", response_model=List[schemas.Device])
+@app.get("/get_all_device", response_model=List[schemas.DeviceBase])
 def get_all_device(db: Session = Depends(get_db)):
-    db_device = db.query(Device).all()
-    if not db_device:
+    devices = db.query(Device).all()
+    if not devices:
         raise HTTPException(status_code=404, detail="No Device")
-    return db_device
+    result = []
+    for device in devices:
+        count_batteries = len(device.batteries)
+        result.append(schemas.DeviceBase(
+            name = device.name,
+            firmware_version = device.firmware_version,
+            is_active = device.is_active,
+            batteries_len = count_batteries
+        ))
+    
+    return result
     
 
-@app.get("/get_device_by_id/{device_id}", response_model=schemas.DeviceBase)
+@app.get("/get_device_by_id/{device_id}", response_model=schemas.Device)
 def get_device_by_id(device_id: int = Path(..., title="Device id"), db: Session = Depends(get_db)):
     db_device = db.query(Device).filter(Device.id == device_id).first()
     if not db_device:
         raise HTTPException(status_code=404, detail="Device not found")
-
-
-
+    return db_device
     
+@app.post("/add_new_device", response_model=schemas.Device)
+def add_new_device(new_devie: schemas.DeviceCreate, db: Session = Depends(get_db)):
+    db_device = models.Device(
+        name=new_devie.name,
+        firmware_version=new_devie.firmware_version,
+        is_active= new_devie.is_active
+    )
+    try:
+        db.add(db_device)
+        db.commit()
+        db.refresh(db_device)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error creating device: {str(e)}")
     
+    return db_device
 
+@app.put("/update_device_by_id/{device_id}", response_model=schemas.DeviceBase)
+def update_device_by_id(device_id: int = Path(..., title="Device id"),
+                        update_device: schemas.DeviceUpdate = None,
+                        db: Session = Depends(get_db)
+                        ):    
+    db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
+    if not db_device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    update_data = update_device.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_device, key, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_device)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error updating device: {str(e)}")
+    
+    return db_device
 
- 
+@app.delete("/delete_device_by_id{device_id}", response_model=schemas.DeviceDelete)
+def delete_device_by_id(device_id: int = Path(..., title="Device_id"), db: Session = Depends(get_db)):
+    db_device = db.query(Device).filter(Device.id == device_id).first()
+    if not db_device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    db.delete(db_device)
+    db.commit()
+    return db_device

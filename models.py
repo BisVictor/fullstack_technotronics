@@ -7,7 +7,7 @@ class Device(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-    firmvare_version = Column(String)
+    firmware_version = Column(String)
     is_active = Column(Boolean, default=True)
 
     batteries = relationship("Battery", back_populates="device")
