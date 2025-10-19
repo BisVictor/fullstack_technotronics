@@ -6,9 +6,18 @@ import schemas
 from database import Base, engine, SessionLocal
 import models
 from models import Battery, Device
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # или список твоих фронт-портов, напр. ["http://localhost:8080"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()
@@ -18,7 +27,7 @@ def get_db():
         db.close()
 
 
-@app.get("/get_all_batteries", response_model=List[schemas.BatteryBase])
+@app.get("/get_all_batteries", response_model=List[schemas.Battery])
 def get_all_batteries(db: Session = Depends(get_db)):
     db_batteries = db.query(Battery).all()
     if not db_batteries:
@@ -109,7 +118,7 @@ def delete_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Se
     return db_battery
 
 #---Device---
-@app.get("/get_all_device", response_model=List[schemas.DeviceBase])
+@app.get("/get_all_device", response_model=List[schemas.Device])
 def get_all_device(db: Session = Depends(get_db)):
     devices = db.query(Device).all()
     if not devices:
@@ -117,7 +126,8 @@ def get_all_device(db: Session = Depends(get_db)):
     result = []
     for device in devices:
         count_batteries = len(device.batteries)
-        result.append(schemas.DeviceBase(
+        result.append(schemas.Device(
+            id=device.id,
             name = device.name,
             firmware_version = device.firmware_version,
             is_active = device.is_active,
