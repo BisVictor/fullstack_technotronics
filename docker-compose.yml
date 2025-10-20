@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  fastapi:
+    build: .
+    container_name: technotronics
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=sqlite:///./test.db
+    restart: always

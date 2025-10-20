@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Мониторинг устройств и АКБ</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/script.js"></script>
 </head>
 <body>
-    <h1>🔋 Мониторинг АКБ и устройств</h1>
+    <header>
+        <h1>🔋 Мониторинг АКБ и устройств</h1>
+    </header>
 
     <section id="stats">
         <h2>📊 Статистика</h2>
@@ -22,7 +25,7 @@
         <h2>⚙️ Устройства</h2>
         <div class="buttons">
             <button onclick="getAllDevices()">📋 Все устройства</button>
-            <button onclick="getDeviceById()">🔍 Найти</button>
+            <button onclick="getDeviceById()">🔍 Найти по ID</button>
             <button onclick="addDevice()">➕ Добавить</button>
             <button onclick="updateDevice()">✏️ Обновить</button>
             <button onclick="deleteDevice()">🗑️ Удалить</button>
@@ -34,11 +37,11 @@
         <h2>🔋 Батареи</h2>
         <div class="buttons">
             <button onclick="getAllBatteries()">📋 Все батареи</button>
-            <button onclick="getBatteryById()">🔍 Найти</button>
+            <button onclick="getBatteryById()">🔍 Найти по ID</button>
             <button onclick="addBattery()">➕ Добавить</button>
             <button onclick="updateBattery()">✏️ Обновить</button>
             <button onclick="deleteBattery()">🗑️ Удалить</button>
-            <button onclick="linkBattery()">🔗 Привязать</button>
+            <button onclick="linkBattery()">🔗 Привязать к устройству</button>
             <button onclick="unlinkBattery()">❌ Отвязать</button>
         </div>
         <div id="batteries-list" class="list"></div>
@@ -46,6 +49,6 @@
 
     <button class="reset-btn" onclick="resetAll()">♻️ Сбросить всё</button>
 
-    <script src="script.js"></script>
+    
 </body>
 </html>

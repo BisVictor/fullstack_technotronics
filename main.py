@@ -6,6 +6,9 @@ from database import Base, engine, SessionLocal
 import models
 from models import Battery, Device
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -25,6 +28,13 @@ def get_db():
     finally:
         db.close()
 
+# Для CSS/JS
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+@app.get("/")
+def root():
+    return FileResponse(os.path.join("frontend", "index.html"))
+
 #---статистика---
 @app.get("/stats")
 def stats(db: Session = Depends(get_db)):
@@ -34,6 +44,7 @@ def stats(db: Session = Depends(get_db)):
         "devices_total": count_devices,
         "batteries_total": count_batteries
     }
+
 #---линковка АКБ к устройству---
 @app.put("/link_battery/{battery_id}/{device_id}")
 def link_battery(battery_id: int = Path(..., title="Battery_id"),
@@ -76,6 +87,7 @@ def get_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Sessi
         raise HTTPException(status_code=404, detail="Battery not found")
     return battery
 
+#---убираем линковку АКБ и устройства
 @app.put("/unlink_battery/{battery_id}")
 def unlink_battery(battery_id: int, db: Session = Depends(get_db)):
     battery = db.query(Battery).filter(Battery.id == battery_id).first()
