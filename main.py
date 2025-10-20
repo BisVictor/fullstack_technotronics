@@ -34,7 +34,7 @@ def stats(db: Session = Depends(get_db)):
         "devices_total": count_devices,
         "batteries_total": count_batteries
     }
-
+#---линковка АКБ к устройству---
 @app.put("/link_battery/{battery_id}/{device_id}")
 def link_battery(battery_id: int = Path(..., title="Battery_id"),
                  device_id: int = Path(..., title="Device_id"),
@@ -60,7 +60,7 @@ def link_battery(battery_id: int = Path(..., title="Battery_id"),
 
     return {"message": f"Battery {battery_id} linked to Device {device_id}"}
 
-
+#---получаем список всех АКБ---
 @app.get("/get_all_batteries", response_model=List[schemas.Battery])
 def get_all_batteries(db: Session = Depends(get_db)):
     db_batteries = db.query(Battery).all()
@@ -68,6 +68,7 @@ def get_all_batteries(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No battery")
     return db_batteries
 
+#---получаем конкретную АКБ по id---
 @app.get("/get_battery_by_id/{battery_id}", response_model=schemas.Battery)
 def get_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Session = Depends(get_db)):    
     battery = db.query(Battery).filter(Battery.id == battery_id).first()
@@ -75,6 +76,24 @@ def get_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Sessi
         raise HTTPException(status_code=404, detail="Battery not found")
     return battery
 
+@app.put("/unlink_battery/{battery_id}")
+def unlink_battery(battery_id: int, db: Session = Depends(get_db)):
+    battery = db.query(Battery).filter(Battery.id == battery_id).first()
+    if not battery:
+        raise HTTPException(status_code=404, detail="Battery not found")
+    
+    battery.device_id = 0
+
+    try:
+        db.commit()
+        db.refresh(battery)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error unlinking battery: {str(e)}")
+
+    return {"message": f"Battery {battery_id} unlinked from device"}
+
+#---добавляем новую АКБ---
 @app.post("/add_new_battery", response_model=schemas.Battery)
 def add_new_battery(battery: schemas.BatteryCreate, db: Session = Depends(get_db)):    
     if battery.device_id:
@@ -101,6 +120,7 @@ def add_new_battery(battery: schemas.BatteryCreate, db: Session = Depends(get_db
 
     return db_battery
 
+#---обновляем данные АКБ---
 @app.put("/update_battery_by_id/{battery_id}", response_model=schemas.BatteryBase)
 def update_battery_by_id(
     battery_id: int = Path(..., title="Battery id"),
@@ -141,7 +161,7 @@ def update_battery_by_id(
 
     return db_battery
 
-
+#---удаляем АКБ по id---
 @app.delete("/delete_battery_by_id/{battery_id}", response_model=schemas.BatteryDelete)
 def delete_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Session = Depends(get_db)):
     db_battery = db.query(Battery).filter(Battery.id == battery_id).first()
@@ -151,7 +171,7 @@ def delete_battery_by_id(battery_id: int = Path(..., title="Battery_id"), db: Se
     db.commit()
     return db_battery
 
-#---Device---
+#---получаем список всех устройств---
 @app.get("/get_all_device", response_model=List[schemas.Device])
 def get_all_device(db: Session = Depends(get_db)):
     devices = db.query(Device).all()
@@ -170,14 +190,15 @@ def get_all_device(db: Session = Depends(get_db)):
     
     return result
     
-
+#---получаем устройство по id---
 @app.get("/get_device_by_id/{device_id}", response_model=schemas.Device)
 def get_device_by_id(device_id: int = Path(..., title="Device id"), db: Session = Depends(get_db)):
     db_device = db.query(Device).filter(Device.id == device_id).first()
     if not db_device:
         raise HTTPException(status_code=404, detail="Device not found")
     return db_device
-    
+
+#---добавляем новое устройство---
 @app.post("/add_new_device", response_model=schemas.Device)
 def add_new_device(new_devie: schemas.DeviceCreate, db: Session = Depends(get_db)):
     db_device = models.Device(
@@ -195,6 +216,7 @@ def add_new_device(new_devie: schemas.DeviceCreate, db: Session = Depends(get_db
     
     return db_device
 
+#---обновляем данные устройства---
 @app.put("/update_device_by_id/{device_id}", response_model=schemas.DeviceBase)
 def update_device_by_id(device_id: int = Path(..., title="Device id"),
                         update_device: schemas.DeviceUpdate = None,
@@ -217,6 +239,7 @@ def update_device_by_id(device_id: int = Path(..., title="Device id"),
     
     return db_device
 
+#---удаляем устройство по id---
 @app.delete("/delete_device_by_id{device_id}", response_model=schemas.DeviceDelete)
 def delete_device_by_id(device_id: int = Path(..., title="Device_id"), db: Session = Depends(get_db)):
     db_device = db.query(Device).filter(Device.id == device_id).first()
