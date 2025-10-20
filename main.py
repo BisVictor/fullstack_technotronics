@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-#from sqlalchemy.exc import IntegrityError
 from typing import List
 import schemas
 from database import Base, engine, SessionLocal
@@ -13,7 +12,7 @@ Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # или список твоих фронт-портов, напр. ["http://localhost:8080"]
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +24,41 @@ def get_db():
         yield db
     finally:
         db.close()
+
+#---статистика---
+@app.get("/stats")
+def stats(db: Session = Depends(get_db)):
+    count_devices = db.query(Device).count()
+    count_batteries = db.query(Battery).count()
+    return{
+        "devices_total": count_devices,
+        "batteries_total": count_batteries
+    }
+
+@app.put("/link_battery/{battery_id}/{device_id}")
+def link_battery(battery_id: int = Path(..., title="Battery_id"),
+                 device_id: int = Path(..., title="Device_id"),
+                 db: Session = Depends(get_db)):
+    db_battery = db.query(Battery).filter(Battery.id == battery_id).first()
+    if not db_battery:
+        raise HTTPException(status_code=404, detail="No battery")
+    db_device = db.query(Device).filter(Device.id == device_id).first()
+    if not db_device:
+        raise HTTPException(status_code=404, detail="No device")
+    
+    if len(db_device.batteries) >= 5:
+        raise HTTPException(status_code=400, detail="Device already has 5 batteries")
+    
+    db_battery.device_id = device_id
+
+    try:
+        db.commit()
+        db.refresh(db_battery)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error linking battery: {str(e)}")
+
+    return {"message": f"Battery {battery_id} linked to Device {device_id}"}
 
 
 @app.get("/get_all_batteries", response_model=List[schemas.Battery])
